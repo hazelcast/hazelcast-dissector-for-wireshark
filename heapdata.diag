@@ -1,0 +1,8 @@
+packetdiag {
+  colwidth = 32
+  node_height = 72
+
+  0-31: Partition hash
+  32-63: Type (Serialization format)
+  64-95: Serialized data [colheight = 3]
+}

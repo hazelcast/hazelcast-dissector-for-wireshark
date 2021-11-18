@@ -3,8 +3,9 @@
 #include <epan/packet.h>
 #include <gmodule.h>
 
-#define HAZELCAST_TCP_PORTS "5701,5702,5703"
 #define HAZELCAST_MULTICAST_PORT 54327
+
+// https://github.com/hazelcast/hazelcast/blob/v5.0/hazelcast/src/main/java/com/hazelcast/internal/nio/Packet.java#L41-L104
 
 //             PACKET HEADER FLAGS
 //
@@ -182,6 +183,10 @@ dissect_hazelcast(tvbuff_t *tvb, packet_info *pinfo, proto_tree *tree _U_, void 
         proto_tree_add_item(hazelcast_tree, hf_hazelcast_protocol_header, tvb, 0, 3, ENC_BIG_ENDIAN);
     } else  if (11 <= packet_len) {
 
+    	// Member Packet
+
+    	// https://github.com/hazelcast/hazelcast/blob/v5.0/hazelcast/src/main/java/com/hazelcast/internal/nio/PacketIOHelper.java#L61-L65
+
     	guint packet_flags = tvb_get_ntohs(tvb, 1);
     	guint packet_type = (packet_flags & FLAG_TYPE0)
     				| (packet_flags & FLAG_TYPE1) >> 1
@@ -199,6 +204,10 @@ dissect_hazelcast(tvbuff_t *tvb, packet_info *pinfo, proto_tree *tree _U_, void 
         int payload_size = tvb_get_ntohil(tvb, offset);
         proto_tree_add_item(hazelcast_tree, hf_hazelcast_packet_payload_size, tvb, offset, 4, ENC_BIG_ENDIAN);
         offset += 4;
+
+        // HeapData header
+        // https://github.com/hazelcast/hazelcast/blob/v5.0/hazelcast/src/main/java/com/hazelcast/internal/serialization/impl/HeapData.java#L35-L37
+
         proto_tree_add_item(hazelcast_tree, hf_hazelcast_payload_hash, tvb, offset, 4, ENC_BIG_ENDIAN);
         offset += 4;
         proto_tree_add_item(hazelcast_tree, hf_hazelcast_payload_serializer, tvb, offset, 4, ENC_BIG_ENDIAN);
@@ -330,16 +339,10 @@ proto_register_hazelcast(void)
 void
 proto_reg_handoff_hazelcast(void)
 {
-	range_t *hazelcast_port_range;
-
-	range_convert_str(wmem_epan_scope(), &hazelcast_port_range, HAZELCAST_TCP_PORTS, 0xFF);
-
     static dissector_handle_t hazelcast_handle;
 
     hazelcast_handle = create_dissector_handle(dissect_hazelcast, proto_hazelcast);
-//    dissector_add_uint_range("tcp.port", hazelcast_port_range, hazelcast_handle);
     dissector_add_uint("tcp.port", 5701, hazelcast_handle);
     dissector_add_uint("tcp.port", 5702, hazelcast_handle);
     dissector_add_uint("tcp.port", 5703, hazelcast_handle);
-    dissector_add_uint("udp.port", HAZELCAST_MULTICAST_PORT, hazelcast_handle);
 }

@@ -1,0 +1,11 @@
+packetdiag {
+  colwidth = 32
+  node_height = 72
+
+  0-7: Packet version
+  8-23: Flags
+  24-55: Partition ID
+  56-87: Payload size
+  88-95: Payload (HeapData)
+  96-127: Payload (HeapData) [colheight = 3]
+}
