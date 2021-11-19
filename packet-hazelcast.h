@@ -112,3 +112,8 @@
 #define JET_SERIALIZER_FIRST -300
 #define JET_SERIALIZER_LAST -399
 
+// https://github.com/hazelcast/hazelcast/blob/5.0/hazelcast/src/main/java/com/hazelcast/internal/serialization/impl/DataSerializableSerializer.java#L54-L55
+// (private) https://github.com/hazelcast/hazelcast-enterprise/blob/5.0/hazelcast-enterprise/src/main/java/com/hazelcast/internal/serialization/impl/EnterpriseDataSerializableHeader.java
+
+#define FLAG_DATASERIALIZABLE_IDS              0x01
+#define FLAG_DATASERIALIZABLE_VERSIONED        0x02

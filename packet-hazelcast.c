@@ -107,6 +107,7 @@ static const value_string serializer_names[] = {
 };
 
 #define HAZELCAST_FRAME_HEADER_LEN    11
+#define HEAP_DATA_OVERHEAD 8
 
 static int proto_hazelcast = -1;
 
@@ -116,7 +117,7 @@ static int hf_hazelcast_packet_flags = -1;
 static int hf_hazelcast_packet_partition_id = -1;
 static int hf_hazelcast_packet_payload_size = -1;
 
-static int hf_hazelcast_payload_hash = -1;
+static int hf_hazelcast_payload_partition_hash = -1;
 static int hf_hazelcast_payload_serializer = -1;
 static int hf_hazelcast_payload_data = -1;
 
@@ -128,6 +129,15 @@ static int hf_hazelcast_packet_flag_type2 = -1;
 static int hf_hazelcast_packet_flag_op_control = -1;
 static int hf_hazelcast_packet_flag_4_0 = -1;
 
+// DataSerializable & IdentifiedDataSerializable
+static int hf_hazelcast_ds_flags = -1;
+static int hf_hazelcast_ds_flag_ids = -1;
+static int hf_hazelcast_ds_flag_versioned = -1;
+
+// IdentifiedDataSerializable
+static int hf_hazelcast_ids_factory_id = -1;
+static int hf_hazelcast_ids_class_id = -1;
+
 static int hf_hazelcast_unknown_bytes = -1;
 
 static gint ett_hazelcast = -1;
@@ -138,7 +148,7 @@ static int dissect_hazelcast_pdu(tvbuff_t *tvb, packet_info *pinfo, proto_tree *
 static guint get_hazelcast_pdu_len(packet_info *pinfo, tvbuff_t *tvb, int offset, void *data);
 
 static int
-dissect_hazelcast(tvbuff_t *tvb, packet_info *pinfo, proto_tree *tree _U_, void *data _U_)
+dissect_hazelcast(tvbuff_t *tvb, packet_info *pinfo, proto_tree *tree, void *data _U_)
 {
 	guint packet_len = tvb_captured_length(tvb);
 	if (packet_len < 3) {
@@ -176,9 +186,37 @@ get_hazelcast_pdu_len(packet_info *pinfo _U_, tvbuff_t *tvb, int offset, void *d
     return payload_size + HAZELCAST_FRAME_HEADER_LEN;
 }
 
+// https://github.com/hazelcast/hazelcast/blob/5.0/hazelcast/src/main/java/com/hazelcast/internal/serialization/impl/DataSerializableSerializer.java#L115-L166
+// (private) https://github.com/hazelcast/hazelcast-enterprise/blob/5.0/hazelcast-enterprise/src/main/java/com/hazelcast/internal/serialization/impl/EnterpriseDataSerializableHeader.java
+// (private) https://github.com/hazelcast/hazelcast-enterprise/blob/5.0/hazelcast-enterprise/src/main/java/com/hazelcast/internal/serialization/impl/EnterpriseDataSerializableSerializer.java#L130-L137
+static int
+decode_data_serializable(tvbuff_t *tvb, packet_info *pinfo, proto_tree *tree)
+{
+    int offset = HAZELCAST_FRAME_HEADER_LEN + HEAP_DATA_OVERHEAD;
+
+    static const int * heapdata_flag_fields[] = {
+        &hf_hazelcast_ds_flag_ids,
+        &hf_hazelcast_ds_flag_versioned,
+        NULL
+    };
+
+    guint8 header = tvb_get_guint8(tvb, offset);
+    gboolean flag_ids = header & FLAG_DATASERIALIZABLE_IDS;
+    gboolean flag_versioned = header & FLAG_DATASERIALIZABLE_VERSIONED;
+
+    proto_tree_add_bitmask(tree, tvb, offset, hf_hazelcast_ds_flags, ett_hazelcast, heapdata_flag_fields, ENC_BIG_ENDIAN);
+    offset += 1;
+
+    if (flag_ids) {
+
+    }
+
+    // TODO
+	return 0;
+}
 
 static int
-dissect_hazelcast_pdu(tvbuff_t *tvb, packet_info *pinfo, proto_tree *tree _U_, void *data _U_)
+dissect_hazelcast_pdu(tvbuff_t *tvb, packet_info *pinfo, proto_tree *tree, void *data _U_)
 {
     col_set_str(pinfo->cinfo, COL_PROTOCOL, "Hazelcast");
     /* Clear the info column */
@@ -218,22 +256,33 @@ dissect_hazelcast_pdu(tvbuff_t *tvb, packet_info *pinfo, proto_tree *tree _U_, v
 	offset += 2;
 	proto_tree_add_item(hazelcast_tree, hf_hazelcast_packet_partition_id, tvb, offset, 4, ENC_BIG_ENDIAN);
 	offset += 4;
-	int payload_size = tvb_get_ntohil(tvb, offset);
-	proto_tree_add_item(hazelcast_tree, hf_hazelcast_packet_payload_size, tvb, offset, 4, ENC_BIG_ENDIAN);
+	int payload_size;
+	proto_tree_add_item_ret_int(hazelcast_tree, hf_hazelcast_packet_payload_size, tvb, offset, 4, ENC_BIG_ENDIAN, &payload_size);
 	offset += 4;
+
+	if (payload_size < HEAP_DATA_OVERHEAD) {
+		proto_tree_add_item(hazelcast_tree, hf_hazelcast_payload_data, tvb, offset, -1, ENC_BIG_ENDIAN);
+		return offset + payload_size;
+	}
 
 	// HeapData header
 	// https://github.com/hazelcast/hazelcast/blob/v5.0/hazelcast/src/main/java/com/hazelcast/internal/serialization/impl/HeapData.java#L35-L37
 
-	proto_tree_add_item(hazelcast_tree, hf_hazelcast_payload_hash, tvb, offset, 4, ENC_BIG_ENDIAN);
+	proto_tree_add_item(hazelcast_tree, hf_hazelcast_payload_partition_hash, tvb, offset, 4, ENC_BIG_ENDIAN);
 	offset += 4;
 
 	int serializer;
 	proto_tree_add_item_ret_int(hazelcast_tree, hf_hazelcast_payload_serializer, tvb, offset, 4, ENC_BIG_ENDIAN, &serializer);
 	offset += 4;
 
-	proto_tree_add_item(hazelcast_tree, hf_hazelcast_payload_data, tvb, offset, -1, ENC_BIG_ENDIAN);
-	offset += 4;
+	switch (serializer) {
+	case CONSTANT_TYPE_DATA_SERIALIZABLE:
+		decode_data_serializable(tvb, pinfo, hazelcast_tree);
+		break;
+	default:
+		proto_tree_add_item(hazelcast_tree, hf_hazelcast_payload_data, tvb, offset, -1, ENC_BIG_ENDIAN);
+		break;
+	}
 
     return tvb_reported_length(tvb);
 }
@@ -272,7 +321,7 @@ proto_register_hazelcast(void)
 	        NULL, 0x0,
 	        NULL, HFILL }
 	    },
-	    { &hf_hazelcast_payload_hash,
+	    { &hf_hazelcast_payload_partition_hash,
 	        { "Payload hash", "hazelcast.payload.hash",
 	        FT_INT32, BASE_DEC,
 	        NULL, 0x0,
@@ -337,7 +386,26 @@ proto_register_hazelcast(void)
 	        FT_BOOLEAN, 8,
 	        NULL, FLAG_4_0,
 	        NULL, HFILL }
-	    }
+	    },
+	    { &hf_hazelcast_ds_flags,
+	        { "DataSerializable flags", "hazelcast.dataserializable.flags",
+	        FT_UINT8, BASE_DEC,
+	        NULL, 0x0,
+	        NULL, HFILL }
+	    },
+	    { &hf_hazelcast_ds_flag_ids,
+	        { "Identified Data Serializable", "hazelcast.dataserializable.ids",
+	        FT_BOOLEAN, 8,
+	        NULL, FLAG_DATASERIALIZABLE_IDS,
+	        NULL, HFILL }
+	    },
+	    { &hf_hazelcast_ds_flag_versioned,
+	        { "Versioned (Enterprise)", "hazelcast.dataserializable.versioned",
+	        FT_BOOLEAN, 8,
+	        NULL, FLAG_DATASERIALIZABLE_VERSIONED,
+	        NULL, HFILL }
+	    },
+
 	};
 
     static gint *ett[] = {
