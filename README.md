@@ -1,5 +1,7 @@
 # Hazelcast 4+ member protocol dissector for WireShark
 
+![Screenshot](imgs/hazelcast-dissector-screenshot.png)
+
 ## What's dissected
 
 ### Protocol header
