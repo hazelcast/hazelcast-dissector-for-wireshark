@@ -1,0 +1,13 @@
+packetdiag {
+  colwidth = 32
+  node_height = 72
+
+  0: IDS=1 [rotate = 270]
+  1: Versioned [rotate = 270]
+  2-7: Unused Flags
+  8-39: Factory ID
+  40-71: Class ID
+  72-87: Version?
+  88-95: Data
+  96-127: Data [colheight=3]
+}

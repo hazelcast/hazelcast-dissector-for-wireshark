@@ -1,5 +1,37 @@
 # Hazelcast 4+ member protocol dissector for WireShark
 
+## What's dissected
+
+### Protocol header
+
+Just 3 bytes: `HZC`
+
+### Member packet
+
+![Packet](imgs/packet.png)
+
+### HeapData (payload)
+
+![HeapData](imgs/heapdata.png)
+
+### Serialized DataSerializable
+
+```
+Type (Serialization format) = -2
+IDS flag=0
+````
+
+![DataSerializable](imgs/dataserializable.png)
+
+### Serialized IdentifiedDataSerializable
+
+```
+Type (Serialization format) = -2
+IDS flag=1
+````
+
+![IdentifiedDataSerializable](imgs/identifieddataserializable.png)
+
 ## Building on Ubuntu (20.04)
 
 ### Prerequisities
@@ -25,5 +57,6 @@ make install
 
 ```bash
 sudo pip3 install nwdiag
+cd imgs
 for i in *.diag; do packetdiag $i; done
 ```

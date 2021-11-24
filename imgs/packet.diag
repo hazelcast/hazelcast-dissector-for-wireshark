@@ -6,6 +6,6 @@ packetdiag {
   8-23: Flags
   24-55: Partition ID
   56-87: Payload size
-  88-95: Payload (HeapData)
-  96-127: Payload (HeapData) [colheight = 3]
+  88-95: HeapData (payload)
+  96-127: HeapData (payload) [colheight = 3]
 }
