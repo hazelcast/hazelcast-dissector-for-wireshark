@@ -1,0 +1,22 @@
+name: Dissector builder
+
+on:
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v2
+      - name: Compile
+        run: |
+          sudo apt update
+          sudo apt full-upgrade -y
+          sudo apt install -y build-essential wireshark wireshark-dev cmake
+          mkdir build
+          cd build
+          cmake ..
+          make

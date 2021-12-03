@@ -2,6 +2,26 @@
 
 ![Screenshot](imgs/hazelcast-dissector-screenshot.png)
 
+## Installation
+
+### Linux (Ubuntu) binaries
+
+* download [hazelcast.so](https://github.com/hazelcast/hazelcast-dissector-for-wireshark/releases/download/latest-snapshot/hazelcast.so) library from the [latest-snapshot release tag](https://github.com/hazelcast/hazelcast-dissector-for-wireshark/releases/tag/latest-snapshot);
+* copy the binary into `${HOME}/.local/lib/wireshark/plugins/3.2/epan/hazelcast.so`
+
+```bash
+mkdir -p "${HOME}/.local/lib/wireshark/plugins/3.2/epan/"
+pushd "${HOME}/.local/lib/wireshark/plugins/3.2/epan/"
+wget https://github.com/hazelcast/hazelcast-dissector-for-wireshark/releases/download/latest-snapshot/hazelcast.so
+popd
+```
+
+### Other systems
+
+We currently don't compile binaries for other platforms, but we welcome PRs that would handle such builds.
+
+Look at [.github/workflows/release-latest-snapshot-linux.yaml](release-latest-snapshot-linux.yaml) GitHub workflow to learn how the Linux build is done.
+
 ## What's dissected
 
 ### Protocol header
@@ -34,24 +54,7 @@ IDS flag=1
 
 ![IdentifiedDataSerializable](imgs/identifieddataserializable.png)
 
-## Building on Ubuntu (20.04)
-
-### Prerequisities
-
-```bash
-sudo apt install build-essential wireshark wireshark-dev cmake
-```
-
-### Build and install
-
-```bash
-# it's cleaner when we don't build it direcly in the source dir - let's create a separate one
-mkdir build
-cd build
-cmake ..
-# build and install it to ${HOME}/.local/lib/wireshark/plugins/...
-make install
-```
+## Others
 
 *For building whole Wireshark from sources take a look at https://gist.github.com/syneart/2d30c075c140624b1e150c8ea318a978*
 
