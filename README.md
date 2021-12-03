@@ -20,7 +20,7 @@ popd
 
 We currently don't compile binaries for other platforms, but we welcome PRs that would handle such builds.
 
-Look at [.github/workflows/release-latest-snapshot-linux.yaml](release-latest-snapshot-linux.yaml) GitHub workflow to learn how the Linux build is done.
+Look at [release-latest-snapshot-linux.yaml](.github/workflows/release-latest-snapshot-linux.yaml) GitHub workflow to learn how the Linux build is done.
 
 ## What's dissected
 
