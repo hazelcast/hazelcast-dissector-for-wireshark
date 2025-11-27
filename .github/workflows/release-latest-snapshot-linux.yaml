@@ -25,7 +25,7 @@ jobs:
           cmake ..
           make
       - name: Upload binaries to release
-        uses: svenstaro/upload-release-action@483c1e56f95e88835747b1c7c60581215016cbf2
+        uses: svenstaro/upload-release-action@6b7fa9f267e90b50a19fef07b3596790bb941741
         with:
           repo_token: ${{ secrets.GITHUB_TOKEN }}
           file: build/hazelcast.so
